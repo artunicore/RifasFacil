@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gerador de Rifas Personalizável</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root {
+            --bg: #f4f6f8;
+            --panel: #ffffff;
+            --text: #1f2937;
+            --muted: #6b7280;
+            --border: #d1d5db;
+            --primary: #e6007e;
+            --primary-dark: #bf0069;
+            --success-bg: #d4edda;
+            --success-text: #155724;
+            --error-bg: #f8d7da;
+            --error-text: #721c24;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .app {
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            min-height: 100vh;
+        }
+
+        aside {
+            background: var(--panel);
+            border-right: 1px solid var(--border);
+            padding: 20px;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow: auto;
+        }
+
+        main {
+            padding: 24px;
+            overflow: auto;
+        }
+
+        h1 {
+            font-size: 22px;
+            margin: 0 0 6px;
+        }
+
+        .subtitle {
+            color: var(--muted);
+            font-size: 14px;
+            margin: 0 0 18px;
+            line-height: 1.4;
+        }
+
+        .step {
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 14px;
+            background: #fff;
+        }
+
+        .step header {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .step-number {
+            width: 26px;
+            height: 26px;
+            display: grid;
+            place-items: center;
+            color: white;
+            background: var(--primary);
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .step-title {
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            margin: 12px 0 6px;
+        }
+
+        input[type="number"],
+        input[type="text"],
+        input[type="color"],
+        select {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px;
+            font-size: 14px;
+            background: #fff;
+        }
+
+        input[type="range"] {
+            width: 100%;
+        }
+
+        .range-row {
+            display: grid;
+            grid-template-columns: 1fr 58px;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .range-value {
+            font-size: 12px;
+            color: var(--muted);
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        button {
+            border: 0;
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background: #111827;
+            color: #fff;
+        }
+
+        .btn-light {
+            background: #e5e7eb;
+            color: #111827;
+        }
+
+        .status {
+            display: none;
+            margin-top: 12px;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 13px;
+        }
+
+        .status.show {
+            display: block;
+        }
+
+        .status.success {
+            background: var(--success-bg);
+            color: var(--success-text);
+        }
+
+        .status.error {
+            background: var(--error-bg);
+            color: var(--error-text);
+        }
+
+        #imagePreview {
+            width: 100%;
+            max-height: 160px;
+            object-fit: cover;
+            border-radius: 12px;
+            margin-top: 10px;
+            display: none;
+            border: 1px solid var(--border);
+        }
+
+        .preview-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .preview-toolbar h2 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .pages {
+            display: grid;
+            gap: 24px;
+            justify-content: center;
+        }
+
+        .svg-page {
+            background: white;
+            box-shadow: 0 14px 40px rgba(0, 0, 0, .12);
+            width: min(100%, 794px);
+            height: auto;
+        }
+
+        .small-note {
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.4;
+            margin-top: 8px;
+        }
+
+        @media (max-width: 900px) {
+            .app {
+                grid-template-columns: 1fr;
+            }
+
+            aside {
+                position: static;
+                height: auto;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+        <aside>
+            <h1>Gerador de Rifas</h1>
+            <p class="subtitle">Configure a arte, ajuste a posição dos números e exporte tudo em PDF.</p>
+
+            <section class="step">
+                <header><span class="step-number">1</span><span class="step-title">Quantidade e layout</span></header>
+                <div class="grid-2">
+                    <div>
+                        <label for="totalRifas">Total de rifas</label>
+                        <input id="totalRifas" type="number" min="1" max="5000" value="20" />
+                    </div>
+                    <div>
+                        <label for="rifasPorPagina">Rifas por página</label>
+                        <input id="rifasPorPagina" type="number" min="1" max="10" value="5" />
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div>
+                        <label for="numeroInicial">Número inicial</label>
+                        <input id="numeroInicial" type="number" min="0" value="1" />
+                    </div>
+                    <div>
+                        <label for="digitosNumero">Dígitos</label>
+                        <input id="digitosNumero" type="number" min="1" max="8" value="3" />
+                    </div>
+                </div>
+            </section>
+
+            <section class="step">
+                <header><span class="step-number">2</span><span class="step-title">Imagem de fundo</span></header>
+                <input id="imageUpload" type="file" accept="image/*" />
+                <img id="imagePreview" alt="Prévia da imagem de fundo" />
+                <p class="small-note">Use uma imagem no formato da rifa. Ela será repetida em cada bilhete.</p>
+            </section>
+
+            <section class="step">
+                <header><span class="step-number">3</span><span class="step-title">Texto e aparência</span></header>
+                <label for="textoCentro">Texto central</label>
+                <input id="textoCentro" type="text" value="RIFA {numero}" />
+
+                <div class="grid-2">
+                    <div>
+                        <label for="corNumero">Cor dos números</label>
+                        <input id="corNumero" type="color" value="#e6007e" />
+                    </div>
+                    <div>
+                        <label for="tamanhoNumero">Tamanho</label>
+                        <input id="tamanhoNumero" type="number" min="6" max="80" value="21" />
+                    </div>
+                </div>
+            </section>
+
+            <section class="step">
+                <header><span class="step-number">4</span><span class="step-title">Posição dos números</span></header>
+
+                <label>Número esquerdo: horizontal</label>
+                <div class="range-row"><input id="numEsqX" type="range" min="0" max="510" value="15" /><span
+                        class="range-value" data-for="numEsqX">15</span></div>
+
+                <label>Número esquerdo: vertical</label>
+                <div class="range-row"><input id="numEsqY" type="range" min="0" max="165" value="150" /><span
+                        class="range-value" data-for="numEsqY">150</span></div>
+
+                <label>Número direito: horizontal</label>
+                <div class="range-row"><input id="numDirX" type="range" min="0" max="510" value="450" /><span
+                        class="range-value" data-for="numDirX">450</span></div>
+
+                <label>Número direito: vertical</label>
+                <div class="range-row"><input id="numDirY" type="range" min="0" max="165" value="30" /><span
+                        class="range-value" data-for="numDirY">30</span></div>
+            </section>
+
+            <section class="step">
+                <header><span class="step-number">5</span><span class="step-title">Medidas da rifa</span></header>
+                <label>Margem esquerda</label>
+                <div class="range-row"><input id="margemEsquerda" type="range" min="0" max="100" value="36" /><span
+                        class="range-value" data-for="margemEsquerda">36</span></div>
+
+                <label>Margem superior</label>
+                <div class="range-row"><input id="margemSuperior" type="range" min="0" max="80" value="9" /><span
+                        class="range-value" data-for="margemSuperior">9</span></div>
+
+                <label>Altura da rifa</label>
+                <div class="range-row"><input id="alturaRifa" type="range" min="80" max="240" value="165" /><span
+                        class="range-value" data-for="alturaRifa">165</span></div>
+            </section>
+
+            <div class="actions">
+                <button id="btnGerar" class="btn-primary">Atualizar</button>
+                <button id="btnExportar" class="btn-secondary">Exportar PDF</button>
+            </div>
+            <button id="btnReset" class="btn-light" style="width:100%; margin-top:10px;">Restaurar padrão</button>
+            <div id="status" class="status"></div>
+        </aside>
+
+        <main>
+            <div class="preview-toolbar">
+                <h2>Pré-visualização</h2>
+                <span id="pageCount" class="small-note"></span>
+            </div>
+            <div id="svgContainer" class="pages"></div>
+        </main>
+    </div>
+
+    <script>
+        const svgNS = "http://www.w3.org/2000/svg";
+        const xlinkNS = "http://www.w3.org/1999/xlink";
+
+        const defaultConfig = {
+            pageWidth: 595.28,
+            pageHeight: 841.89,
+            totalRifas: 20,
+            rifasPorPagina: 5,
+            numeroInicial: 1,
+            digitosNumero: 3,
+            margemSuperior: 9,
+            margemEsquerda: 36,
+            larguraRifa: 510.3,
+            alturaRifa: 165,
+            espacoEntreRifas: 0,
+            numEsqX: 15,
+            numEsqY: 150,
+            numDirX: 450,
+            numDirY: 30,
+            corNumero: "#e6007e",
+            tamanhoNumero: 21,
+            textoCentro: "RIFA {numero}",
+            mostrarTextoCentro: true,
+            mostrarLinhaCorte: true
+        };
+
+        let config = { ...defaultConfig };
+        let imagemBase64 = null;
+
+        const $ = (id) => document.getElementById(id);
+        const svgContainer = $("svgContainer");
+        const statusDiv = $("status");
+        const imagePreview = $("imagePreview");
+        const pageCount = $("pageCount");
+
+        const controls = [
+            "totalRifas", "rifasPorPagina", "numeroInicial", "digitosNumero",
+            "margemSuperior", "margemEsquerda", "alturaRifa",
+            "numEsqX", "numEsqY", "numDirX", "numDirY",
+            "corNumero", "tamanhoNumero", "textoCentro"
+        ];
+
+        function showStatus(message, type = "success") {
+            statusDiv.textContent = message;
+            statusDiv.className = `status show ${type}`;
+            clearTimeout(showStatus.timer);
+            showStatus.timer = setTimeout(() => {
+                statusDiv.className = "status";
+            }, 4000);
+        }
+
+        function readConfigFromControls() {
+            config.totalRifas = clamp(parseInt($("totalRifas").value || 1, 10), 1, 5000);
+            config.rifasPorPagina = clamp(parseInt($("rifasPorPagina").value || 1, 10), 1, 10);
+            config.numeroInicial = clamp(parseInt($("numeroInicial").value || 0, 10), 0, 99999999);
+            config.digitosNumero = clamp(parseInt($("digitosNumero").value || 3, 10), 1, 8);
+            config.margemSuperior = Number($("margemSuperior").value);
+            config.margemEsquerda = Number($("margemEsquerda").value);
+            config.alturaRifa = Number($("alturaRifa").value);
+            config.numEsqX = Number($("numEsqX").value);
+            config.numEsqY = Number($("numEsqY").value);
+            config.numDirX = Number($("numDirX").value);
+            config.numDirY = Number($("numDirY").value);
+            config.corNumero = $("corNumero").value;
+            config.tamanhoNumero = Number($("tamanhoNumero").value);
+            config.textoCentro = $("textoCentro").value || "RIFA {numero}";
+            updateRangeLabels();
+        }
+
+        function writeConfigToControls() {
+            for (const key of controls) {
+                if ($(key)) $(key).value = config[key];
+            }
+            updateRangeLabels();
+        }
+
+        function updateRangeLabels() {
+            document.querySelectorAll(".range-value[data-for]").forEach((item) => {
+                const input = $(item.dataset.for);
+                if (input) item.textContent = input.value;
+            });
+        }
+
+        function clamp(value, min, max) {
+            if (Number.isNaN(value)) return min;
+            return Math.min(Math.max(value, min), max);
+        }
+
+        function formatNumber(num) {
+            return String(num).padStart(config.digitosNumero, "0");
+        }
+
+        function createSvgElement(tag, attrs = {}, text = null) {
+            const element = document.createElementNS(svgNS, tag);
+            Object.entries(attrs).forEach(([key, value]) => {
+                if (key === "href") element.setAttributeNS(xlinkNS, "xlink:href", value);
+                else element.setAttribute(key, String(value));
+            });
+            if (text !== null) element.textContent = text;
+            return element;
+        }
+
+        function criarTextoNumero(numero, x, y) {
+            const text = createSvgElement("text", {
+                x,
+                y,
+                fill: config.corNumero,
+                "font-family": "Brice-BoldCondensed, Brice, Arial, sans-serif",
+                "font-size": config.tamanhoNumero,
+                "font-weight": 700
+            }, formatNumber(numero));
+            return text;
+        }
+
+        function gerarPaginaRifas(numeroPagina, rifasNaPagina, inicioNumero) {
+            const svg = createSvgElement("svg", {
+                id: `pagina-${numeroPagina}`,
+                class: "svg-page",
+                xmlns: svgNS,
+                "xmlns:xlink": xlinkNS,
+                viewBox: `0 0 ${config.pageWidth} ${config.pageHeight}`,
+                width: config.pageWidth,
+                height: config.pageHeight
+            });
+
+            svg.appendChild(createSvgElement("rect", {
+                width: config.pageWidth,
+                height: config.pageHeight,
+                fill: "#ffffff",
+                stroke: "#1d1d1b",
+                "stroke-width": 1
+            }));
+
+            for (let i = 0; i < rifasNaPagina; i++) {
+                const numeroRifa = inicioNumero + i;
+                const yPos = config.margemSuperior + i * (config.alturaRifa + config.espacoEntreRifas);
+
+                svg.appendChild(createSvgElement("rect", {
+                    x: config.margemEsquerda,
+                    y: yPos,
+                    width: config.larguraRifa,
+                    height: config.alturaRifa,
+                    fill: "#ffffff"
+                }));
+
+                if (imagemBase64) {
+                    svg.appendChild(createSvgElement("image", {
+                        x: config.margemEsquerda,
+                        y: yPos,
+                        width: config.larguraRifa,
+                        height: config.alturaRifa,
+                        preserveAspectRatio: "xMidYMid slice",
+                        href: imagemBase64
+                    }));
+                }
+
+                svg.appendChild(createSvgElement("rect", {
+                    x: config.margemEsquerda,
+                    y: yPos,
+                    width: config.larguraRifa,
+                    height: config.alturaRifa,
+                    fill: "none",
+                    stroke: "#1d1d1b",
+                    "stroke-width": 1
+                }));
+
+                svg.appendChild(criarTextoNumero(
+                    numeroRifa,
+                    config.margemEsquerda + config.numEsqX,
+                    yPos + config.numEsqY
+                ));
+
+                svg.appendChild(criarTextoNumero(
+                    numeroRifa,
+                    config.margemEsquerda + config.numDirX,
+                    yPos + config.numDirY
+                ));
+
+                if (config.mostrarTextoCentro) {
+                    const centro = config.textoCentro.replace("{numero}", formatNumber(numeroRifa));
+                    svg.appendChild(createSvgElement("text", {
+                        x: config.margemEsquerda + config.larguraRifa / 2,
+                        y: yPos + config.alturaRifa / 2,
+                        "font-family": "Arial, sans-serif",
+                        "font-size": 14,
+                        fill: "#333333",
+                        "text-anchor": "middle"
+                    }, centro));
+                }
+
+                if (config.mostrarLinhaCorte && i < rifasNaPagina - 1) {
+                    svg.appendChild(createSvgElement("line", {
+                        x1: config.margemEsquerda,
+                        y1: yPos + config.alturaRifa,
+                        x2: config.margemEsquerda + config.larguraRifa,
+                        y2: yPos + config.alturaRifa,
+                        stroke: "#1d1d1b",
+                        "stroke-width": 0.5,
+                        "stroke-dasharray": "5,5"
+                    }));
+                }
+            }
+
+            svg.appendChild(createSvgElement("text", {
+                x: 570,
+                y: 835,
+                "font-family": "Arial, sans-serif",
+                "font-size": 10,
+                fill: "#666666"
+            }, `Pág. ${numeroPagina}`));
+
+            return svg;
+        }
+
+        function gerarRifas(silent = false) {
+            readConfigFromControls();
+            svgContainer.innerHTML = "";
+
+            const totalPaginas = Math.ceil(config.totalRifas / config.rifasPorPagina);
+
+            for (let pagina = 0; pagina < totalPaginas; pagina++) {
+                const inicioNumero = config.numeroInicial + pagina * config.rifasPorPagina;
+                const rifasNestaPagina = Math.min(
+                    config.rifasPorPagina,
+                    config.totalRifas - pagina * config.rifasPorPagina
+                );
+                svgContainer.appendChild(gerarPaginaRifas(pagina + 1, rifasNestaPagina, inicioNumero));
+            }
+
+            pageCount.textContent = `${config.totalRifas} rifas em ${totalPaginas} página(s)`;
+            if (!silent) showStatus("Pré-visualização atualizada.");
+        }
+
+        async function exportarParaPDF() {
+            if (!svgContainer.children.length) {
+                showStatus("Gere as rifas antes de exportar.", "error");
+                return;
+            }
+
+            showStatus("Gerando PDF...");
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+                for (let i = 0; i < svgContainer.children.length; i++) {
+                    if (i > 0) pdf.addPage();
+                    const canvas = await html2canvas(svgContainer.children[i], {
+                        backgroundColor: "#ffffff",
+                        scale: 2,
+                        useCORS: true,
+                        allowTaint: true
+                    });
+                    const imgData = canvas.toDataURL("image/png");
+                    pdf.addImage(
+                        imgData,
+                        "PNG",
+                        0,
+                        0,
+                        pdf.internal.pageSize.getWidth(),
+                        pdf.internal.pageSize.getHeight()
+                    );
+                }
+
+                const primeiro = formatNumber(config.numeroInicial);
+                const ultimo = formatNumber(config.numeroInicial + config.totalRifas - 1);
+                pdf.save(`rifas_${primeiro}_a_${ultimo}.pdf`);
+                showStatus("PDF gerado com sucesso.");
+            } catch (error) {
+                console.error(error);
+                showStatus("Erro ao gerar PDF. Verifique se a imagem carregada é válida.", "error");
+            }
+        }
+
+        function convertImageToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (event) => resolve(event.target.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function debounce(fn, delay = 120) {
+            let timer;
+            return (...args) => {
+                clearTimeout(timer);
+                timer = setTimeout(() => fn(...args), delay);
+            };
+        }
+
+        const gerarRifasDebounced = debounce(() => gerarRifas(true));
+
+        controls.forEach((id) => {
+            const input = $(id);
+            if (!input) return;
+            input.addEventListener("input", gerarRifasDebounced);
+            input.addEventListener("change", gerarRifasDebounced);
+        });
+
+        $("btnGerar").addEventListener("click", () => gerarRifas(false));
+        $("btnExportar").addEventListener("click", exportarParaPDF);
+
+        $("btnReset").addEventListener("click", () => {
+            config = { ...defaultConfig };
+            writeConfigToControls();
+            gerarRifas(false);
+        });
+
+        $("imageUpload").addEventListener("change", async (event) => {
+            const file = event.target.files?.[0];
+            if (!file) return;
+
+            try {
+                imagemBase64 = await convertImageToBase64(file);
+                imagePreview.src = imagemBase64;
+                imagePreview.style.display = "block";
+                gerarRifas(true);
+                showStatus("Imagem carregada com sucesso.");
+            } catch (error) {
+                showStatus("Não foi possível carregar a imagem.", "error");
+            }
+        });
+
+        writeConfigToControls();
+        gerarRifas(true);
+    </script>
+</body>
+
+</html>
